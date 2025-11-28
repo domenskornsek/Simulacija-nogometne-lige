@@ -5,9 +5,7 @@ library(glue)
 library(dplyr)
 library(ggplot2)
 
-# -----------------------------
-# POWER: uporablja uteži, ki si jih podal
-# -----------------------------
+
 calculate_power <- function(team, is_home = FALSE, event_mod = 0) {
   weights <- c(
     napad = 10,
@@ -413,7 +411,7 @@ server <- function(input, output, session){
     showNotification("All remaining matches simulated", type = "message")
   })
   
-  ## --- League table calculation (works from current vals) ---
+  ## --- League table calculation ---
   league_table_df <- reactive({
     req(vals$teams)
     teams <- sapply(vals$teams, function(x) x$name)
@@ -599,7 +597,7 @@ server <- function(input, output, session){
     mc_long <- do.call(rbind, sims_list)
     vals$mc_results <- mc_long
     
-    # compute averages & aggregate table (same as before but from mc_long)
+    # compute averages & aggregate table
     montecarlo_table <- mc_long %>%
       group_by(Team) %>%
       summarise(
@@ -726,7 +724,7 @@ server <- function(input, output, session){
     datatable(probtab, rownames = FALSE, options = list(pageLength = 50, dom = 't'))
   })
   
-  # manual refresh button for league table (keeps reactives tidy)
+  # manual refresh button for league table
   observeEvent(input$force_table_refresh, {
     output$league_table <- renderDT({
       req(vals$teams)
@@ -738,4 +736,5 @@ server <- function(input, output, session){
 }
 
 shinyApp(ui, server)
+
 
