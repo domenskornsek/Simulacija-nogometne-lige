@@ -110,6 +110,9 @@ ui <- fluidPage(
                  h4("Verjetnosti (izbrana ekipa)"),
                  tableOutput("mc_probabilities"),
                  hr(),
+                 h4("Verjetnosti končnega mesta (izbrana ekipa)"),
+                 tableOutput("mc_position_probs"),
+                 hr(),
                  h4("Distribucija točk izbrane ekipe"),
                  plotOutput("mc_hist_points", height = "300px"),
                  hr(),
@@ -411,6 +414,27 @@ server <- function(input, output, session){
     showNotification("All remaining matches simulated", type = "message")
   })
   
+  output$mc_position_probs <- renderTable({
+    req(vals$mc_results, input$mc_team)
+    
+    team <- input$mc_team
+    n_sim <- length(unique(vals$mc_results$sim))
+    n_teams <- length(unique(vals$mc_results$Team))
+    
+    df <- vals$mc_results %>%
+      filter(Team == team) %>%
+      count(Position) %>%
+      mutate(Probability = n / n_sim) %>%
+      select(Position, Probability)
+    
+    # poskrbimo, da so prikazana VSA mesta (1,2,...,n_teams)
+    full <- data.frame(Position = 1:n_teams) %>%
+      left_join(df, by = "Position") %>%
+      mutate(Probability = ifelse(is.na(Probability), 0, Probability))
+    
+    full
+  })
+  
   ## --- League table calculation ---
   league_table_df <- reactive({
     req(vals$teams)
@@ -667,6 +691,7 @@ server <- function(input, output, session){
     tib
   }, sanitize.text.function = function(x) x)
   
+  
   output$mc_hist_points <- renderPlot({
     req(vals$mc_results, input$mc_team)
     df <- vals$mc_results %>% filter(Team == input$mc_team)
@@ -736,5 +761,4 @@ server <- function(input, output, session){
 }
 
 shinyApp(ui, server)
-
 
