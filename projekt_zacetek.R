@@ -36,6 +36,132 @@ calculate_power <- function(team, is_home = FALSE, event_mod = 0) {
   return(final_power)
 }
 
+preset_leagues <- list(
+  
+  "Premier League (2024)" = list(
+    list(
+      name = "Liverpool", 
+      napad = 82, sredina = 83, obramba = 85, vratar = 89,
+      domace = 90, trener = 75, utrujenost=30, fitnes = 90, 
+      sodniki = 70, kvaliteta = 84
+         ),
+    list(
+      name = "Manchester United", 
+      napad = 77, sredina = 78, obramba = 80, vratar = 83,
+      domace = 85, trener=65, utrujenost = 20, fitnes = 80, 
+      sodniki = 65, kvaliteta = 80
+         ),
+    list(
+      name = "Manchester City",
+      napad = 85,    sredina = 87,  obramba = 83, vratar = 85,
+      domace = 50, trener = 90, utrujenost = 40, fitnes = 85,
+      sodniki = 75, kvaliteta = 86
+    ),
+    list(
+      name = "Arsenal",
+      napad = 83,    sredina = 85,  obramba = 82, vratar = 78,
+      domace = 80, trener = 85, utrujenost = 25, fitnes = 88,
+      sodniki = 80, kvaliteta = 83
+    ),
+    list(
+      name = "Chelsea",
+      napad = 81,    sredina = 79,  obramba = 79, vratar = 80,
+      domace = 75, trener = 72, utrujenost = 12, fitnes = 75,
+      sodniki = 50, kvaliteta = 79
+    ),
+    list(
+      name = "Tottenham Hotspur",
+      napad = 81,    sredina = 81,  obramba = 80, vratar = 76,
+      domace = 40, trener = 70, utrujenost = 13, fitnes = 77,
+      sodniki = 50, kvaliteta = 81
+    ),
+    list(
+      name = "Crystal Palace",
+      napad = 75,    sredina = 76,  obramba = 76, vratar = 76,
+      domace = 60, trener = 55, utrujenost = 14, fitnes = 65,
+      sodniki = 50, kvaliteta = 77
+    ),
+    list(
+      name = "Brighton & Hove Albion",
+      napad = 77,    sredina = 74,  obramba = 77, vratar = 76,
+      domace = 55, trener = 70, utrujenost = 20, fitnes = 73,
+      sodniki = 40, kvaliteta = 77
+    ),
+    list(
+      name = "Everton",
+      napad = 76,    sredina = 77,  obramba = 76, vratar = 76,
+      domace = 55, trener = 60, utrujenost = 10, fitnes = 69,
+      sodniki = 47, kvaliteta = 76
+    ),
+    list(
+      name = "Fulham",
+      napad = 72,    sredina = 72,  obramba = 77, vratar = 82,
+      domace = 55, trener = 65, utrujenost = 13, fitnes = 70,
+      sodniki = 42, kvaliteta = 77
+    ),
+    list(
+      name = "West Ham United",
+      napad = 78,    sredina = 80,  obramba = 78, vratar = 78,
+      domace = 45, trener = 45, utrujenost = 10, fitnes = 67,
+      sodniki = 30, kvaliteta = 79
+    ),
+    list(
+      name = "Nottingham Forest",
+      napad = 76,    sredina = 76,  obramba = 76, vratar = 76,
+      domace = 65, trener = 60, utrujenost = 15, fitnes = 72,
+      sodniki = 50, kvaliteta = 76
+    ),
+    list(
+      name = "Bournemouth",
+      napad = 79,    sredina = 75,  obramba = 74, vratar = 74,
+      domace = 55, trener = 68, utrujenost = 15, fitnes = 65,
+      sodniki = 40, kvaliteta = 76
+    ),
+    list(
+      name = "Brentford",
+      napad = 77,    sredina = 77,  obramba = 75, vratar = 76,
+      domace = 55, trener = 55, utrujenost = 10, fitnes = 70,
+      sodniki = 40, kvaliteta = 77
+    ),
+    list(
+      name = "Aston Villa",
+      napad = 83,    sredina = 79,  obramba = 78, vratar = 87,
+      domace = 75, trener = 75, utrujenost = 25, fitnes = 80,
+      sodniki = 50, kvaliteta = 81
+    ),
+    list(
+      name = "Newcastle United",
+      napad = 80,    sredina = 76,  obramba = 73, vratar = 75,
+      domace = 70, trener = 60, utrujenost = 25, fitnes = 80,
+      sodniki = 50, kvaliteta = 80
+    ),
+    list(
+      name = "Southampton",
+      napad = 74,    sredina = 72,  obramba = 74, vratar = 74,
+      domace = 25, trener = 40, utrujenost = 20, fitnes = 40,
+      sodniki = 15, kvaliteta = 73
+    ),
+    list(
+      name = "Ipswich Town",
+      napad = 72,    sredina = 71,  obramba = 72, vratar = 72,
+      domace = 30, trener = 44, utrujenost = 15, fitnes = 50,
+      sodniki = 20, kvaliteta = 71
+    ),
+    list(
+      name = "Wolverhampton", 
+      napad = 76, sredina = 77, obramba = 75, vratar = 79, 
+      domace = 45, trener = 55, utrujenost = 14, fitnes = 50, 
+      sodniki = 20, kvaliteta = 76),
+    list(
+      name = "Leicester City", 
+      napad = 76, sredina = 75, obramba = 73, vratar = 80, 
+      domace = 40, trener = 50, utrujenost = 14, fitnes = 50, 
+      sodniki = 20, kvaliteta = 75)
+  )
+  
+)
+
+
 ui <- fluidPage(
   tags$head(tags$style(HTML(".team-box { border:1px solid #e3e3e3; padding:10px; border-radius:6px; margin-bottom:8px; }
                                  .small-muted { font-size:12px; color:#777; }
@@ -46,6 +172,23 @@ ui <- fluidPage(
   titlePanel("Soccer League Simulator + Monte Carlo analiza"),
   sidebarLayout(
     sidebarPanel(width = 4,
+                 h4("Predpripravljene lige"),
+                 
+                 selectInput(
+                   "preset_league",
+                   "Izberi ligo:",
+                   choices = c("", names(preset_leagues)),
+                   selected = ""
+                 ),
+                 
+                 actionButton(
+                   "load_preset",
+                   "Naloži ligo",
+                   icon = icon("download")
+                 ),
+                 
+                 hr(),
+                 
                  h4("Create teams"),
                  textInput("team_name", "Team name", placeholder = "e.g. Red Rovers"),
                  sliderInput("napad",   "Moč napada (1-100)",   min = 1, max = 100, value = 50),
@@ -192,6 +335,42 @@ server <- function(input, output, session){
       )
     })
   })
+  
+  observeEvent(input$load_preset, {
+    req(input$preset_league != "")
+    
+    league <- preset_leagues[[input$preset_league]]
+    
+    vals$teams <- lapply(league, function(t) {
+      list(
+        name = t$name,
+        napad = t$napad,
+        sredina = t$sredina,
+        obramba = t$obramba,
+        vratar = t$vratar,
+        domace = t$domace,
+        trener = t$trener,
+        utrujenost = t$utrujenost,
+        fitnes = t$fitnes,
+        sodniki = t$sodniki,
+        kvaliteta = t$kvaliteta,
+        matches_played = 0
+      )
+    })
+    
+    # reset samo sezonskih podatkov
+    vals$fixtures <- NULL
+    vals$results <- NULL
+    vals$events <- NULL
+    vals$mc_results <- NULL
+    vals$montecarlo_table <- NULL
+    
+    showNotification(
+      paste("Liga naložena:", input$preset_league),
+      type = "message"
+    )
+  })
+  
   
   output$teams_dt <- renderDT({
     if(length(vals$teams)==0) return(NULL)
@@ -761,4 +940,3 @@ server <- function(input, output, session){
 }
 
 shinyApp(ui, server)
-
