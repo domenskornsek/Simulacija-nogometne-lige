@@ -5,6 +5,84 @@ library(glue)
 library(dplyr)
 library(ggplot2)
 
+statistika_ui = tabPanel(
+  "Statistika",
+  br(),
+  h4("1) Intervali zaupanja uvrstitev"),
+  tableOutput("rank_ci_out"),
+  hr(),
+  h4("2) ANOVA (vpliv lastnosti na točke)"),
+  verbatimTextOutput("anova_out"),
+  hr(),
+  h4("3) Regresijska analiza"),
+  verbatimTextOutput("lm_out"),
+  hr(),
+  h4("4) Korelacijska matrika"),
+  tableOutput("cor_out"),
+  hr(),
+  h4("5) Sensitivity analiza (napad)"),
+  tableOutput("sensitivity_out")
+)
+
+server_statistika = function(input, output, session, vals){
+  
+  output$rank_ci_out = renderTable({
+    req(vals$mc_results)
+    vals$mc_results %>%
+      dplyr::group_by(Team) %>%
+      dplyr::summarise(
+        MeanPos = mean(Position),
+        MedianPos = median(Position),
+        CI_05 = quantile(Position, 0.05),
+        CI_95 = quantile(Position, 0.95)
+      )
+  })
+  
+  output$anova_out = renderPrint({
+    req(vals$mc_results)
+    aov(
+      Points ~ GF + GA + GD,
+      data = vals$mc_results
+    ) |> summary()
+  })
+  
+  output$lm_out = renderPrint({
+    req(vals$mc_results)
+    lm(
+      Points ~ GF + GA + GD,
+      data = vals$mc_results
+    ) |> summary()
+  })
+  
+  output$cor_out = renderTable({
+    req(vals$mc_results)
+    vals$mc_results %>%
+      dplyr::select(Points, Position, GF, GA, GD) %>%
+      cor()
+  }, rownames = TRUE)
+  
+  output$sensitivity_out = renderTable({
+    req(vals$mc_results)
+    base = vals$mc_results %>%
+      dplyr::group_by(Team) %>%
+      dplyr::summarise(BasePoints = mean(Points))
+    
+    plus = vals$mc_results %>%
+      dplyr::mutate(AdjPoints = Points + 0.1 * GD) %>%
+      dplyr::group_by(Team) %>%
+      dplyr::summarise(High = mean(AdjPoints))
+    
+    minus = vals$mc_results %>%
+      dplyr::mutate(AdjPoints = Points - 0.1 * GD) %>%
+      dplyr::group_by(Team) %>%
+      dplyr::summarise(Low = mean(AdjPoints))
+    
+    base %>%
+      left_join(minus, by="Team") %>%
+      left_join(plus, by="Team") %>%
+      mutate(Diff = High - Low)
+  })
+}
 
 calculate_power = function(team, is_home = FALSE, event_mod = 0) {
   weights = c(
@@ -314,7 +392,8 @@ ui = fluidPage(
                  hr(),
                  h4("Tabela verjetnosti zmage / top3 / izpadanja"),
                  DTOutput("mc_win_prob_table")
-        )
+        ),
+        statistika_ui
       )
     )
   )
@@ -329,6 +408,9 @@ server = function(input, output, session){
     events = NULL,
     mc_results = NULL  # long-format per-simulation results
   )
+  
+  server_statistika(input, output, session, vals)
+  
   
   ## --- Team management ---
   observeEvent(input$add_team, {
@@ -987,3 +1069,129 @@ server = function(input, output, session){
 }
 
 shinyApp(ui, server)
+
+
+
+
+############################
+# STATISTICNE ANALIZE
+############################
+
+# 1) Intervali zaupanja za uvrstitve
+rank_ci = mc_results %>%
+  dplyr::group_by(team) %>%
+  dplyr::summarise(
+    mean_rank = mean(rank),
+    median_rank = median(rank),
+    ci_05 = quantile(rank, 0.05),
+    ci_95 = quantile(rank, 0.95)
+  )
+
+# 3) ANOVA – vpliv lastnosti ekip na tocke
+anova_model = aov(
+  points ~ napad + sredina + obramba + vratar + domace + utrujenost,
+  data = mc_results
+)
+
+anova_results = summary(anova_model)
+
+# 4) Regresijska analiza (OLS)
+lm_model = lm(
+  points ~ napad + obramba + vratar + domace + utrujenost + fitnes,
+  data = mc_results
+)
+
+lm_summary = summary(lm_model)
+
+# 5) Korelacijska analiza
+cor_matrix = mc_results %>%
+  dplyr::select(points, rank, napad, obramba, domace, utrujenost) %>%
+  cor()
+
+# 6) Sensitivity analysis – sprememba teze napada
+simulate_with_weight = function(multiplier) {
+  mc_results %>%
+    dplyr::mutate(adj_points = points + napad * multiplier) %>%
+    dplyr::group_by(team) %>%
+    dplyr::summarise(mean_points = mean(adj_points))
+}
+
+sens_low = simulate_with_weight(-0.1)
+sens_high = simulate_with_weight(0.1)
+
+sensitivity = sens_low %>%
+  dplyr::rename(low = mean_points) %>%
+  dplyr::left_join(
+    sens_high %>% dplyr::rename(high = mean_points),
+    by = "team"
+  ) %>%
+  dplyr::mutate(diff = high - low)
+
+
+
+
+############################
+# SHINY STATISTIKA ZAVIHEK
+############################
+
+# ---- SERVER EXTENSION ----
+server_statistika = function(input, output, session, vals){
+  
+  output$rank_ci_out = renderTable({
+    req(vals$mc_results)
+    vals$mc_results %>%
+      dplyr::group_by(Team) %>%
+      dplyr::summarise(
+        MeanPos = mean(Position),
+        MedianPos = median(Position),
+        CI_05 = quantile(Position, 0.05),
+        CI_95 = quantile(Position, 0.95)
+      )
+  })
+  
+  output$anova_out = renderPrint({
+    req(vals$mc_results)
+    aov(
+      Points ~ GF + GA + GD,
+      data = vals$mc_results
+    ) |> summary()
+  })
+  
+  output$lm_out = renderPrint({
+    req(vals$mc_results)
+    lm(
+      Points ~ GF + GA + GD,
+      data = vals$mc_results
+    ) |> summary()
+  })
+  
+  output$cor_out = renderTable({
+    req(vals$mc_results)
+    vals$mc_results %>%
+      dplyr::select(Points, Position, GF, GA, GD) %>%
+      cor()
+  }, rownames = TRUE)
+  
+  output$sensitivity_out = renderTable({
+    req(vals$mc_results)
+    base = vals$mc_results %>%
+      dplyr::group_by(Team) %>%
+      dplyr::summarise(BasePoints = mean(Points))
+    
+    plus = vals$mc_results %>%
+      dplyr::mutate(AdjPoints = Points + 0.1 * GD) %>%
+      dplyr::group_by(Team) %>%
+      dplyr::summarise(High = mean(AdjPoints))
+    
+    minus = vals$mc_results %>%
+      dplyr::mutate(AdjPoints = Points - 0.1 * GD) %>%
+      dplyr::group_by(Team) %>%
+      dplyr::summarise(Low = mean(AdjPoints))
+    
+    base %>%
+      left_join(minus, by="Team") %>%
+      left_join(plus, by="Team") %>%
+      mutate(Diff = High - Low)
+  })
+}
+
