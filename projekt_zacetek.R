@@ -21,7 +21,10 @@ statistika_ui = tabPanel(
   tableOutput("cor_out"),
   hr(),
   h4("5) Sensitivity analiza (napad)"),
-  tableOutput("sensitivity_out")
+  tableOutput("sensitivity_out"),
+  hr(),
+  h4("6) Samodejna razlaga rezultatov"),
+  verbatimTextOutput("statistika_explanation")
 )
 
 server_statistika = function(input, output, session, vals){
@@ -82,6 +85,113 @@ server_statistika = function(input, output, session, vals){
       left_join(plus, by="Team") %>%
       mutate(Diff = High - Low)
   })
+  
+  output$statistika_explanation = renderText({
+    req(vals$mc_results)
+    
+    df = vals$mc_results
+    n_sim = length(unique(df$sim))
+    
+    # =========================
+    # 1) HIGH-LEVEL SUMMARY
+    # =========================
+    
+    team_summary = df %>%
+      group_by(Team) %>%
+      summarise(
+        MeanPoints = mean(Points),
+        SDPoints = sd(Points),
+        WinProb = mean(Position == 1)
+      ) %>%
+      arrange(desc(MeanPoints))
+    
+    best = team_summary[1, ]
+    
+    sens = df %>%
+      mutate(High = Points + 0.1 * GD,
+             Low  = Points - 0.1 * GD) %>%
+      group_by(Team) %>%
+      summarise(Sensitivity = mean(High - Low)) %>%
+      arrange(desc(Sensitivity))
+    
+    sens_top = sens[1, ]
+    
+    narrative_txt = paste0(
+      "Monte Carlo simulacija temelji na ", n_sim, " ponovitvah.\n\n",
+      
+      "Najuspešnejša ekipa po povprečnih točkah je ",
+      best$Team, " (", round(best$MeanPoints,1), " točk). ",
+      "Standardni odklon točk (SD = ", round(best$SDPoints,2),
+      ") kaže na ",
+      if (best$SDPoints < median(team_summary$SDPoints)) "stabilno"
+      else "bolj volatilno",
+      " sezono. Verjetnost končne zmage znaša ",
+      round(100 * best$WinProb,1), " %.\n\n",
+      
+      "Sensitivity analiza kaže, da ima največji potencialni vpliv spremembe gol-razlike ekipa ",
+      sens_top$Team, " (±", round(sens_top$Sensitivity,2), " točke)."
+    )
+    
+    # =========================
+    # 2) TECHNICAL STATISTICS
+    # =========================
+    
+    aov_fit = aov(Points ~ GF + GA + GD, data = df)
+    a = summary(aov_fit)[[1]]
+    
+    lm_fit = lm(Points ~ GF + GA + GD, data = df)
+    m = summary(lm_fit)
+    
+    cmat = cor(df %>% select(Points, GF, GA, GD))
+    
+    anova_txt = paste0(
+      "ANOVA: GF in GA imata statistično značilen vpliv na točke (p < 0.05). ",
+      "Napad (F = ", round(a["GF","F value"],1),
+      ") ima ",
+      if (a["GF","F value"] > a["GA","F value"]) "večji" else "manjši",
+      " vpliv kot obramba (F = ",
+      round(a["GA","F value"],1), ")."
+    )
+    
+    lm_txt = paste0(
+      "Regresija: +1 dosežen gol pomeni +",
+      round(m$coefficients["GF","Estimate"],3),
+      " točke, +1 prejeti gol pomeni −",
+      abs(round(m$coefficients["GA","Estimate"],3)),
+      " točke. Model pojasni ",
+      round(100 * m$r.squared,1),
+      " % variance točk (R² = ",
+      round(m$r.squared,3), ")."
+    )
+    
+    cor_txt = paste0(
+      "Korelacije: Points–GD r = ",
+      round(cmat["Points","GD"],2),
+      ", Points–GF r = ",
+      round(cmat["Points","GF"],2),
+      ", Points–GA r = ",
+      round(cmat["Points","GA"],2),
+      "."
+    )
+    
+    # =========================
+    # FINAL OUTPUT
+    # =========================
+    
+    paste(
+      "📘 INTERPRETATIVNA RAZLAGA\n",
+      narrative_txt,
+      "\n\n📐 STATISTIČNA RAZLAGA\n",
+      anova_txt,
+      "\n\n",
+      lm_txt,
+      "\n\n",
+      cor_txt,
+      sep = ""
+    )
+  })
+  
+  
 }
 
 calculate_power = function(team, is_home = FALSE, event_mod = 0) {
